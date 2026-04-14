@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arbeitszeit">
+<title>Arbeitszeiterfassung</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f1a;
+  --bg2: #1a1a2e;
+  --bg3: #22223b;
+  --accent: #4cc9f0;
+  --accent2: #7b2d8b;
+  --green: #06d6a0;
+  --red: #ef476f;
+  --amber: #ffd166;
+  --text: #e8e8f0;
+  --text2: #9898b0;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;overscroll-behavior:none}
+body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;min-height:100dvh}
+
+/* NAV */
+.nav{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 4px}
+.nav-btn{flex:1;padding:14px 4px 12px;font-size:11px;font-family:var(--sans);color:var(--text2);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s;border-bottom:2px solid transparent}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.nav-icon{font-size:18px;line-height:1}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:16px 14px 80px}
+.panel{display:none}.panel.active{display:block}
+
+/* STEMPEL BEREICH */
+.stempel-hero{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 16px;margin-bottom:14px;text-align:center}
+.stempel-time{font-family:var(--mono);font-size:36px;font-weight:500;color:var(--accent);letter-spacing:2px;margin-bottom:2px}
+.stempel-date{font-size:13px;color:var(--text2);margin-bottom:16px}
+.stempel-btn{width:100%;padding:18px;font-size:17px;font-weight:500;font-family:var(--sans);border:none;border-radius:var(--radius);cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.stempel-btn.ein{background:var(--green);color:#0a1628}
+.stempel-btn.aus{background:var(--red);color:#fff}
+.stempel-btn:active{transform:scale(.97)}
+.stempel-status{margin-top:12px;font-size:13px;color:var(--text2);font-family:var(--mono)}
+.stempel-status span{color:var(--text)}
+
+/* KACHELN */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.tile{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px}
+.tile-lbl{font-size:11px;color:var(--text2);margin-bottom:6px;letter-spacing:.04em}
+.tile-val{font-family:var(--mono);font-size:20px;font-weight:500}
+.tile-val.pos{color:var(--green)}
+.tile-val.neg{color:var(--red)}
+.tile-val.neutral{color:var(--accent)}
+
+/* KARTE */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+
+/* FORMULAR */
+.field{margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px}
+input,select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;font-size:15px;color:var(--text);font-family:var(--sans);appearance:none;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239898b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* BUTTONS */
+.btn{padding:11px 18px;font-size:14px;font-weight:500;font-family:var(--sans);border:1px solid var(--border2);border-radius:var(--radius-sm);background:transparent;color:var(--text);cursor:pointer;transition:all .12s;width:100%}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent);color:#0a1628;border-color:var(--accent)}
+.btn-green{background:var(--green);color:#0a1628;border-color:var(--green)}
+.btn-danger{background:transparent;border-color:var(--red);color:var(--red)}
+.btn-sm{padding:6px 12px;font-size:12px;width:auto}
+.btn-row{display:flex;gap:8px}
+
+/* BADGE */
+.badge{display:inline-block;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;font-family:var(--mono)}
+.b-arbeit{background:rgba(6,214,160,.15);color:var(--green)}
+.b-urlaub{background:rgba(76,201,240,.15);color:var(--accent)}
+.b-krank{background:rgba(239,71,111,.15);color:var(--red)}
+.b-feiertag{background:rgba(255,209,102,.15);color:var(--amber)}
+
+/* TABELLE */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:11px;color:var(--text2);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.tbl td{padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .mono{font-family:var(--mono);font-size:12px}
+
+/* VERLAUF CHART */
+.chart-wrap{position:relative;width:100%;height:180px}
+
+/* LISTE */
+.list-item{padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.list-item:last-child{border-bottom:none}
+.list-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.list-dot.pos{background:var(--green)}
+.list-dot.neg{background:var(--red)}
+.list-info{flex:1;min-width:0}
+.list-title{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.list-val{font-family:var(--mono);font-size:13px;flex-shrink:0}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:12px 0}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px 16px;color:var(--text2);font-size:14px}
+
+/* SECTION LABEL */
+.sec{font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;margin-top:16px}
+
+/* TOAST */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 20px;font-size:14px;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* MONATS SELECTOR */
+.monat-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.monat-bar select{flex:1}
+.monat-bar .btn{width:auto;padding:10px 16px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showTab('home')" id="tab-home">
+    <span class="nav-icon">⏱</span>Stempeln
+  </button>
+  <button class="nav-btn" onclick="showTab('erfassen')" id="tab-erfassen">
+    <span class="nav-icon">✏️</span>Erfassen
+  </button>
+  <button class="nav-btn" onclick="showTab('monat')" id="tab-monat">
+    <span class="nav-icon">📊</span>Monat
+  </button>
+  <button class="nav-btn" onclick="showTab('fahrten')" id="tab-fahrten">
+    <span class="nav-icon">🚗</span>Fahrten
+  </button>
+  <button class="nav-btn" onclick="showTab('settings')" id="tab-settings">
+    <span class="nav-icon">⚙️</span>Einstellungen
+  </button>
+</nav>
+
+<main class="main">
+
+<!-- HOME: STEMPELN -->
+<div id="panel-home" class="panel active">
+  <div class="stempel-hero">
+    <div class="stempel-time" id="s-clock">00:00:00</div>
+    <div class="stempel-date" id="s-date">–</div>
+    <button class="stempel-btn ein" id="s-btn" onclick="stempeln()">Einstempeln</button>
+    <div class="stempel-status" id="s-status">Noch nicht eingestempelt</div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="tile-lbl">Heute gearbeitet</div>
+      <div class="tile-val neutral" id="h-heute">– h</div>
+    </div>
+    <div class="tile">
+      <div class="tile-lbl">Saldo heute</div>
+      <div class="tile-val" id="h-saldo">– h</div>
+    </div>
+    <div class="tile">
+      <div class="tile-lbl">Überstunden gesamt</div>
+      <div class="tile-val" id="h-ue">– h</div>
+    </div>
+    <div class="tile">
+      <div class="tile-lbl">Urlaub verbleibend</div>
+      <div class="tile-val neutral" id="h-url">–</div>
+    </div>
+  </div>
+
+  <div class="sec">Letzte Einträge</div>
+  <div class="card" style="padding:8px 12px">
+    <div id="h-recent"><div class="empty">Noch keine Einträge</div></div>
+  </div>
+</div>
+
+<!-- ERFASSEN -->
+<div id="panel-erfassen" class="panel">
+  <div class="card">
+    <div class="card-title">Arbeitstag manuell eintragen</div>
+    <div class="field"><label>Datum</label><input type="date" id="e-datum"></div>
+    <div class="field"><label>Typ</label>
+      <select id="e-typ" onchange="toggleETyp()">
+        <option value="arbeit">Arbeitstag</option>
+        <option value="urlaub">Urlaub</option>
+        <option value="krank">Krank</option>
+        <option value="feiertag">Feiertag</option>
+      </select>
+    </div>
+    <div id="e-zeiten">
+      <div class="grid3" style="margin-bottom:12px">
+        <div class="field" style="margin:0"><label>Von</label><input type="time" id="e-von" value="09:00"></div>
+        <div class="field" style="margin:0"><label>Bis</label><input type="time" id="e-bis" value="17:00"></div>
+        <div class="field" style="margin:0"><label>Pause (min)</label><input type="number" id="e-pause" value="30" min="0"></div>
+      </div>
+    </div>
+    <div class="field"><label>Notiz / Besonderheit</label><textarea id="e-notiz" placeholder="z.B. Homeoffice, Meeting, Sondereinsatz..."></textarea></div>
+    <button class="btn btn-primary" onclick="saveEntry()">Eintrag speichern</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Überstunden nachtragen</div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="field" style="margin:0"><label>Stunden (h)</label><input type="number" id="ue-h" step="0.25" placeholder="z.B. 8.5"></div>
+      <div class="field" style="margin:0"><label>Per Datum</label><input type="date" id="ue-dat"></div>
+    </div>
+    <div class="field"><label>Kommentar</label><input type="text" id="ue-komm" placeholder="z.B. Übertrag Vorjahr"></div>
+    <button class="btn" onclick="saveUebertrag()">Überstunden speichern</button>
+  </div>
+</div>
+
+<!-- MONATSÜBERSICHT -->
+<div id="panel-monat" class="panel">
+  <div class="monat-bar">
+    <select id="m-monat"></select>
+    <select id="m-jahr" style="width:90px"></select>
+    <button class="btn btn-sm btn-green" onclick="exportExcel()">Excel</button>
+  </div>
+
+  <div class="tiles" id="m-tiles"></div>
+
+  <div class="card">
+    <div class="card-title">Tagesstunden im Monat</div>
+    <div class="chart-wrap"><canvas id="m-chart"></canvas></div>
+  </div>
+
+  <div class="card" style="padding:8px 12px">
+    <div class="card-title">Alle Tage</div>
+    <div style="overflow-x:auto">
+      <table class="tbl" id="m-tbl">
+        <thead><tr><th>Datum</th><th>Typ</th><th>Ist-h</th><th>Saldo</th><th></th></tr></thead>
+        <tbody id="m-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- FAHRTEN -->
+<div id="panel-fahrten" class="panel">
+  <div class="tiles" id="f-tiles">
+    <div class="tile"><div class="tile-lbl">Fahrten</div><div class="tile-val neutral" id="f-anz">0</div></div>
+    <div class="tile"><div class="tile-lbl">Kilometer</div><div class="tile-val neutral" id="f-km">0 km</div></div>
+    <div class="tile" style="grid-column:span 2"><div class="tile-lbl">Erstattung gesamt</div><div class="tile-val pos" id="f-betrag">0,00 €</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Fahrt erfassen</div>
+    <div class="field"><label>Datum</label><input type="date" id="f-datum"></div>
+    <div class="field"><label>Ziel / Anlass</label><input type="text" id="f-ziel" placeholder="z.B. Außenstelle, Schulung, Kunde"></div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="field" style="margin:0"><label>Kilometer (ges.)</label><input type="number" id="f-km-in" step="1" placeholder="0"></div>
+      <div class="field" style="margin:0"><label>€ je km</label><input type="number" id="f-rate" step="0.01" value="0.30"></div>
+    </div>
+    <div class="field"><label>Verkehrsmittel</label>
+      <select id="f-mittel">
+        <option>PKW (privat)</option><option>PKW (Dienst)</option><option>ÖPNV</option><option>Fahrrad</option>
+      </select>
+    </div>
+    <div class="field"><label>Notiz</label><textarea id="f-notiz" placeholder="Kurzbeschreibung..."></textarea></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveFahrt()">Fahrt speichern</button>
+      <button class="btn btn-sm btn-green" onclick="exportFahrten()">Abrechnung</button>
+    </div>
+  </div>
+
+  <div class="sec">Fahrtenlog</div>
+  <div id="f-list"><div class="empty">Noch keine Fahrten</div></div>
+</div>
+
+<!-- EINSTELLUNGEN -->
+<div id="panel-settings" class="panel">
+  <div class="card">
+    <div class="card-title">Arbeitszeit-Modell</div>
+    <div class="field"><label>Name / Mitarbeiter</label><input type="text" id="cfg-name" placeholder="Max Mustermann"></div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="field" style="margin:0"><label>Soll-h pro Tag</label><input type="number" id="cfg-h" step="0.5" value="8"></div>
+      <div class="field" style="margin:0"><label>Arbeitstage/Woche</label><input type="number" id="cfg-tage" min="1" max="7" value="5"></div>
+    </div>
+    <div class="field"><label>Urlaubsanspruch (Tage/Jahr)</label><input type="number" id="cfg-url" value="30"></div>
+    <button class="btn btn-primary" onclick="saveConfig()">Einstellungen speichern</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Daten & Export</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7">Alle Daten werden lokal in deinem Browser gespeichert. Sie bleiben beim Schließen der App erhalten. Vor größeren Updates empfiehlt sich ein Excel-Export als Sicherung.</p>
+    <div class="btn-row">
+      <button class="btn btn-sm btn-green" onclick="exportAlles()">Alles exportieren</button>
+      <button class="btn btn-sm btn-danger" onclick="clearAll()">Daten löschen</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">App installieren (PWA)</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.7">Öffne diese Seite in Chrome auf deinem Android-Handy → Menü (⋮) → "Zum Startbildschirm hinzufügen". Die App verhält sich dann wie eine native App.</p>
+  </div>
+</div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ── STATE ────────────────────────────────────────────────
+let entries = JSON.parse(localStorage.getItem('wt_e')||'[]');
+let fahrten = JSON.parse(localStorage.getItem('wt_f')||'[]');
+let cfg     = JSON.parse(localStorage.getItem('wt_c')||'{"name":"","h":8,"tage":5,"url":30,"uebertrag":0}');
+let stempel = JSON.parse(localStorage.getItem('wt_s')||'{"ein":null,"status":"aus"}');
+
+function persist(){
+  localStorage.setItem('wt_e', JSON.stringify(entries));
+  localStorage.setItem('wt_f', JSON.stringify(fahrten));
+  localStorage.setItem('wt_c', JSON.stringify(cfg));
+  localStorage.setItem('wt_s', JSON.stringify(stempel));
+}
+
+// ── UTILS ────────────────────────────────────────────────
+function today(){ return new Date().toISOString().split('T')[0]; }
+function fmtDate(s){ if(!s)return'–'; const d=new Date(s+'T12:00:00'); return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function fmtTime(d){ return d.toTimeString().slice(0,8); }
+function calcH(von,bis,pause){ if(!von||!bis)return 0; const[vh,vm]=von.split(':').map(Number); const[bh,bm]=bis.split(':').map(Number); return Math.max(0,((bh*60+bm)-(vh*60+vm)-(pause||0))/60); }
+function toast(msg, ms=2200){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), ms); }
+function typBadge(t){ const cls={arbeit:'b-arbeit',urlaub:'b-urlaub',krank:'b-krank',feiertag:'b-feiertag'}; const lbl={arbeit:'Arbeit',urlaub:'Urlaub',krank:'Krank',feiertag:'Feiertag'}; return `<span class="badge ${cls[t]||'b-arbeit'}">${lbl[t]||t}</span>`; }
+function totalUe(){ return entries.reduce((s,e)=>{ if(e.typ==='arbeit') return s+e.h-(cfg.h||8); return s; },0)+(cfg.uebertrag||0); }
+
+// ── UHRZEIT ──────────────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  document.getElementById('s-clock').textContent = fmtTime(now);
+  document.getElementById('s-date').textContent = now.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  if(stempel.status==='ein' && stempel.ein){
+    const diff = (Date.now()-stempel.ein)/3600000;
+    const pause = cfg.h>=8 ? 30 : 0;
+    document.getElementById('h-heute').textContent = Math.max(0,diff-pause/60).toFixed(2)+' h';
+  }
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── STEMPELN ─────────────────────────────────────────────
+function stempeln(){
+  const now = new Date();
+  const d = today();
+  if(stempel.status === 'aus'){
+    stempel.ein = Date.now();
+    stempel.einStr = now.toTimeString().slice(0,5);
+    stempel.datum = d;
+    stempel.status = 'ein';
+    persist();
+    renderStempel();
+    toast('Eingestempelt um '+stempel.einStr+' ✓');
+  } else {
+    const ausStr = now.toTimeString().slice(0,5);
+    const pause = cfg.h >= 8 ? 30 : 0;
+    // Save entry
+    const idx = entries.findIndex(e=>e.datum===stempel.datum);
+    const entry = {datum:stempel.datum, typ:'arbeit', von:stempel.einStr, bis:ausStr, pause:pause, notiz:'', h:calcH(stempel.einStr,ausStr,pause)};
+    if(idx>=0) entries[idx]=entry; else entries.push(entry);
+    entries.sort((a,b)=>a.datum.localeCompare(b.datum));
+    stempel.status = 'aus';
+    stempel.ein = null;
+    persist();
+    renderStempel();
+    renderHome();
+    toast('Ausgestempelt um '+ausStr+' ✓');
+  }
+}
+
+function renderStempel(){
+  const btn = document.getElementById('s-btn');
+  const stat = document.getElementById('s-status');
+  if(stempel.status==='ein'){
+    btn.className='stempel-btn aus';
+    btn.textContent='Ausstempeln';
+    stat.innerHTML='Eingestempelt seit <span>'+stempel.einStr+' Uhr</span>';
+  } else {
+    btn.className='stempel-btn ein';
+    btn.textContent='Einstempeln';
+    stat.innerHTML='Noch nicht eingestempelt';
+  }
+}
+
+// ── HOME ─────────────────────────────────────────────────
+function renderHome(){
+  const d = today();
+  const todayE = entries.find(e=>e.datum===d);
+  const istH = todayE && todayE.typ==='arbeit' ? todayE.h : 0;
+  const saldo = istH - (cfg.h||8);
+  const ue = totalUe();
+  const urlTaken = entries.filter(e=>e.typ==='urlaub').length;
+  const urlLeft = (cfg.url||30) - urlTaken;
+
+  if(todayE) document.getElementById('h-heute').textContent = istH.toFixed(2)+' h';
+  const salEl = document.getElementById('h-saldo');
+  salEl.textContent = (saldo>=0?'+':'')+saldo.toFixed(2)+' h';
+  salEl.className = 'tile-val '+(saldo>=0?'pos':'neg');
+  const ueEl = document.getElementById('h-ue');
+  ueEl.textContent = (ue>=0?'+':'')+ue.toFixed(2)+' h';
+  ueEl.className = 'tile-val '+(ue>=0?'pos':'neg');
+  document.getElementById('h-url').textContent = urlLeft+' Tage';
+
+  // Recent
+  const last = entries.slice(-5).reverse();
+  const el = document.getElementById('h-recent');
+  if(!last.length){ el.innerHTML='<div class="empty">Noch keine Einträge</div>'; return; }
+  el.innerHTML = last.map(e=>{
+    const sld = e.typ==='arbeit' ? e.h-(cfg.h||8) : 0;
+    return `<div class="list-item">
+      <div class="list-dot ${e.typ==='arbeit'&&sld>=0?'pos':'neg'}"></div>
+      <div class="list-info">
+        <div class="list-title">${fmtDate(e.datum)} ${typeBadge2(e.typ)}</div>
+        <div class="list-sub">${e.notiz||''}</div>
+      </div>
+      <div class="list-val">${e.typ==='arbeit'?e.h.toFixed(2)+' h':'–'}</div>
+    </div>`;
+  }).join('');
+}
+function typeBadge2(t){ const lbl={arbeit:'Arbeit',urlaub:'Urlaub',krank:'Krank',feiertag:'Feiertag'}; return lbl[t]||t; }
+
+// ── ERFASSEN ─────────────────────────────────────────────
+document.getElementById('e-datum').value = today();
+document.getElementById('ue-dat').value = today();
+document.getElementById('f-datum').value = today();
+
+function toggleETyp(){
+  const t = document.getElementById('e-typ').value;
+  document.getElementById('e-zeiten').style.display = t==='arbeit' ? 'block':'none';
+}
+
+function saveEntry(){
+  const datum = document.getElementById('e-datum').value;
+  if(!datum){ toast('Bitte Datum wählen'); return; }
+  const typ = document.getElementById('e-typ').value;
+  const von = document.getElementById('e-von').value;
+  const bis = document.getElementById('e-bis').value;
+  const pause = parseInt(document.getElementById('e-pause').value)||0;
+  const notiz = document.getElementById('e-notiz').value;
+  const idx = entries.findIndex(e=>e.datum===datum);
+  const entry = {datum, typ, von, bis, pause, notiz, h:calcH(von,bis,pause)};
+  if(idx>=0) entries[idx]=entry; else entries.push(entry);
+  entries.sort((a,b)=>a.datum.localeCompare(b.datum));
+  persist(); renderHome();
+  document.getElementById('e-notiz').value='';
+  toast('Eintrag gespeichert ✓');
+}
+
+function saveUebertrag(){
+  const h = parseFloat(document.getElementById('ue-h').value)||0;
+  cfg.uebertrag = (cfg.uebertrag||0)+h;
+  persist(); renderHome();
+  document.getElementById('ue-h').value='';
+  toast(h+' h Überstunden gespeichert ✓');
+}
+
+// ── MONATSÜBERSICHT ──────────────────────────────────────
+let chartInst = null;
+function initMonat(){
+  const ms = document.getElementById('m-monat');
+  const js = document.getElementById('m-jahr');
+  if(ms.options.length) return;
+  ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'].forEach((m,i)=>{
+    const o=document.createElement('option'); o.value=i; o.textContent=m; ms.appendChild(o);
+  });
+  const now = new Date();
+  ms.value = now.getMonth();
+  for(let y=now.getFullYear()-2;y<=now.getFullYear()+1;y++){
+    const o=document.createElement('option'); o.value=y; o.textContent=y; js.appendChild(o);
+  }
+  js.value = now.getFullYear();
+  ms.onchange = js.onchange = renderMonat;
+}
+
+function renderMonat(){
+  const m = parseInt(document.getElementById('m-monat').value);
+  const y = parseInt(document.getElementById('m-jahr').value);
+  const prefix = `${y}-${String(m+1).padStart(2,'0')}`;
+  const me = entries.filter(e=>e.datum.startsWith(prefix));
+  const arb = me.filter(e=>e.typ==='arbeit');
+  const soll = arb.length*(cfg.h||8);
+  const ist = arb.reduce((s,e)=>s+e.h,0);
+  const ue = ist-soll;
+  const url = me.filter(e=>e.typ==='urlaub').length;
+
+  document.getElementById('m-tiles').innerHTML = `
+    <div class="tile"><div class="tile-lbl">Soll-Stunden</div><div class="tile-val neutral">${soll.toFixed(1)} h</div></div>
+    <div class="tile"><div class="tile-lbl">Ist-Stunden</div><div class="tile-val neutral">${ist.toFixed(2)} h</div></div>
+    <div class="tile"><div class="tile-lbl">Saldo Monat</div><div class="tile-val ${ue>=0?'pos':'neg'}">${(ue>=0?'+':'')+ue.toFixed(2)} h</div></div>
+    <div class="tile"><div class="tile-lbl">Urlaub</div><div class="tile-val neutral">${url} Tage</div></div>`;
+
+  const tbody = document.getElementById('m-tbody');
+  if(!me.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text2)">Keine Einträge</td></tr>'; }
+  else { tbody.innerHTML = me.map(e=>{
+    const sld = e.typ==='arbeit' ? e.h-(cfg.h||8) : null;
+    return `<tr>
+      <td class="mono">${fmtDate(e.datum).slice(0,5)}</td>
+      <td>${typBadge(e.typ)}</td>
+      <td class="mono">${e.typ==='arbeit'?e.h.toFixed(2):'–'}</td>
+      <td class="mono" style="color:${sld===null?'var(--text2)':sld>=0?'var(--green)':'var(--red)'}">${sld===null?'–':(sld>=0?'+':'')+sld.toFixed(2)}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="delEntry('${e.datum}')">×</button></td>
+    </tr>`;
+  }).join(''); }
+
+  if(chartInst) chartInst.destroy();
+  const ctx = document.getElementById('m-chart').getContext('2d');
+  chartInst = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: arb.map(e=>fmtDate(e.datum).slice(0,5)),
+      datasets:[
+        {label:'Ist-h', data:arb.map(e=>parseFloat(e.h.toFixed(2))), backgroundColor:'rgba(76,201,240,.7)', borderRadius:4},
+        {label:'Soll', data:arb.map(()=>cfg.h||8), type:'line', borderColor:'#06d6a0', backgroundColor:'transparent', pointRadius:0, borderDash:[4,3]}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9898b0',font:{size:11}}},tooltip:{titleFont:{size:11},bodyFont:{size:11}}},
+      scales:{
+        y:{beginAtZero:true, ticks:{color:'#9898b0',font:{size:10}}, grid:{color:'rgba(255,255,255,.05)'}},
+        x:{ticks:{color:'#9898b0',font:{size:9},maxRotation:45}, grid:{display:false}}
+      }
+    }
+  });
+}
+
+// ── FAHRTEN ──────────────────────────────────────────────
+function saveFahrt(){
+  const datum = document.getElementById('f-datum').value;
+  const ziel = document.getElementById('f-ziel').value;
+  const km = parseFloat(document.getElementById('f-km-in').value)||0;
+  const rate = parseFloat(document.getElementById('f-rate').value)||0.30;
+  const mittel = document.getElementById('f-mittel').value;
+  const notiz = document.getElementById('f-notiz').value;
+  if(!datum||!ziel){ toast('Bitte Datum und Ziel angeben'); return; }
+  fahrten.push({datum, ziel, km, rate, mittel, notiz, betrag:km*rate});
+  fahrten.sort((a,b)=>a.datum.localeCompare(b.datum));
+  persist(); renderFahrten();
+  document.getElementById('f-ziel').value='';
+  document.getElementById('f-km-in').value='';
+  document.getElementById('f-notiz').value='';
+  toast('Fahrt gespeichert ✓');
+}
+
+function renderFahrten(){
+  const km = fahrten.reduce((s,f)=>s+f.km,0);
+  const betrag = fahrten.reduce((s,f)=>s+f.betrag,0);
+  document.getElementById('f-anz').textContent = fahrten.length;
+  document.getElementById('f-km').textContent = km+' km';
+  document.getElementById('f-betrag').textContent = betrag.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+  const el = document.getElementById('f-list');
+  if(!fahrten.length){ el.innerHTML='<div class="empty">Noch keine Fahrten</div>'; return; }
+  el.innerHTML = fahrten.slice().reverse().map((f,i)=>`
+    <div class="card" style="padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:14px;font-weight:500">${f.ziel}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px">${fmtDate(f.datum)} · ${f.mittel} · ${f.km} km</div>
+          ${f.notiz?`<div style="font-size:12px;color:var(--text2);margin-top:2px">${f.notiz}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <span style="font-family:var(--mono);color:var(--green);font-size:14px">${f.betrag.toFixed(2)} €</span>
+          <button class="btn btn-sm btn-danger" onclick="delFahrt(${fahrten.length-1-i})">×</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function delFahrt(i){ fahrten.splice(i,1); persist(); renderFahrten(); toast('Fahrt gelöscht'); }
+function delEntry(datum){ entries=entries.filter(e=>e.datum!==datum); persist(); renderHome(); renderMonat(); toast('Eintrag gelöscht'); }
+
+// ── CONFIG ───────────────────────────────────────────────
+function loadConfig(){
+  document.getElementById('cfg-name').value = cfg.name||'';
+  document.getElementById('cfg-h').value = cfg.h||8;
+  document.getElementById('cfg-tage').value = cfg.tage||5;
+  document.getElementById('cfg-url').value = cfg.url||30;
+}
+function saveConfig(){
+  cfg.name = document.getElementById('cfg-name').value;
+  cfg.h = parseFloat(document.getElementById('cfg-h').value)||8;
+  cfg.tage = parseInt(document.getElementById('cfg-tage').value)||5;
+  cfg.url = parseInt(document.getElementById('cfg-url').value)||30;
+  persist(); toast('Einstellungen gespeichert ✓');
+}
+function clearAll(){
+  if(confirm('Wirklich alle Daten löschen? Dieser Schritt kann nicht rückgängig gemacht werden.')){
+    entries=[]; fahrten=[]; stempel={ein:null,status:'aus'}; cfg={name:'',h:8,tage:5,url:30,uebertrag:0};
+    persist(); renderHome(); renderStempel(); renderFahrten(); toast('Alle Daten gelöscht');
+  }
+}
+
+// ── EXPORT ───────────────────────────────────────────────
+function exportExcel(){
+  const m = parseInt(document.getElementById('m-monat').value);
+  const y = parseInt(document.getElementById('m-jahr').value);
+  const monate=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const prefix = `${y}-${String(m+1).padStart(2,'0')}`;
+  const me = entries.filter(e=>e.datum.startsWith(prefix));
+  if(!me.length){ toast('Keine Einträge für diesen Monat'); return; }
+  const rows = me.map(e=>({
+    Datum:fmtDate(e.datum), Typ:e.typ, Von:e.von||'', Bis:e.bis||'',
+    Pause_Min:e.typ==='arbeit'?e.pause:'', Ist_Stunden:e.typ==='arbeit'?parseFloat(e.h.toFixed(2)):'',
+    Saldo_h:e.typ==='arbeit'?parseFloat((e.h-(cfg.h||8)).toFixed(2)):'', Notiz:e.notiz||''
+  }));
+  const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb,ws,'Arbeitszeit');
+  XLSX.writeFile(wb, `Arbeitszeit_${cfg.name?cfg.name+'_':''}${monate[m]}_${y}.xlsx`);
+}
+
+function exportFahrten(){
+  if(!fahrten.length){ toast('Keine Fahrten vorhanden'); return; }
+  const rows = fahrten.map(f=>({
+    Datum:fmtDate(f.datum), Ziel:f.ziel, Verkehrsmittel:f.mittel,
+    Kilometer:f.km, Rate_EUR:f.rate, Betrag_EUR:parseFloat(f.betrag.toFixed(2)), Notiz:f.notiz||''
+  }));
+  const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb,ws,'Fahrtkosten');
+  XLSX.writeFile(wb, `Fahrtkosten${cfg.name?'_'+cfg.name:''}.xlsx`);
+}
+
+function exportAlles(){
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.json_to_sheet(entries.map(e=>({Datum:fmtDate(e.datum),Typ:e.typ,Von:e.von||'',Bis:e.bis||'',Pause:e.pause||'',Stunden:e.h||'',Notiz:e.notiz||''})));
+  XLSX.utils.book_append_sheet(wb,ws1,'Arbeitszeit');
+  if(fahrten.length){
+    const ws2 = XLSX.utils.json_to_sheet(fahrten.map(f=>({Datum:fmtDate(f.datum),Ziel:f.ziel,KM:f.km,Rate:f.rate,Betrag:f.betrag.toFixed(2),Notiz:f.notiz||''})));
+    XLSX.utils.book_append_sheet(wb,ws2,'Fahrten');
+  }
+  XLSX.writeFile(wb, `Arbeitszeit_Komplett_Export.xlsx`);
+}
+
+// ── TABS ─────────────────────────────────────────────────
+function showTab(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id==='monat'){ initMonat(); renderMonat(); }
+  if(id==='fahrten'){ renderFahrten(); }
+  if(id==='settings'){ loadConfig(); }
+}
+
+// ── INIT ─────────────────────────────────────────────────
+renderStempel();
+renderHome();
+</script>
+</body>
+</html>
