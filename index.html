@@ -317,6 +317,54 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 </main>
 
+<!-- PAUSE MODAL (nach Ausstempeln) -->
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closePauseModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius) var(--radius) 0 0;padding:20px 18px 32px;width:100%;max-width:480px">
+    <div style="font-size:16px;font-weight:500;margin-bottom:4px" id="modal-title">Pause eintragen</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="modal-sub">Wie lange war deine Pause heute?</div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="field" style="margin:0"><label>Von (Einstempelzeit)</label><input type="time" id="modal-von"></div>
+      <div class="field" style="margin:0"><label>Bis (Ausstempelzeit)</label><input type="time" id="modal-bis"></div>
+    </div>
+    <div class="field"><label>Pause (Minuten)</label><input type="number" id="modal-pause" min="0" max="480" placeholder="z.B. 30"></div>
+    <div class="field"><label>Notiz (optional)</label><input type="text" id="modal-notiz" placeholder="z.B. Homeoffice, Sondereinsatz..."></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Netto-Arbeitszeit: <span style="color:var(--accent);font-family:var(--mono)" id="modal-preview">–</span></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="confirmPause()">Speichern</button>
+      <button class="btn" onclick="closePauseModal()">Überspringen</button>
+    </div>
+  </div>
+</div>
+
+<!-- BEARBEITEN MODAL -->
+<div id="edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeEditModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius) var(--radius) 0 0;padding:20px 18px 32px;width:100%;max-width:480px">
+    <div style="font-size:16px;font-weight:500;margin-bottom:14px">Eintrag bearbeiten</div>
+    <input type="hidden" id="edit-datum">
+    <div class="field"><label>Typ</label>
+      <select id="edit-typ" onchange="toggleEditTyp()">
+        <option value="arbeit">Arbeitstag</option>
+        <option value="urlaub">Urlaub</option>
+        <option value="krank">Krank</option>
+        <option value="feiertag">Feiertag</option>
+      </select>
+    </div>
+    <div id="edit-zeiten">
+      <div class="grid3" style="margin-bottom:12px">
+        <div class="field" style="margin:0"><label>Von</label><input type="time" id="edit-von"></div>
+        <div class="field" style="margin:0"><label>Bis</label><input type="time" id="edit-bis"></div>
+        <div class="field" style="margin:0"><label>Pause (min)</label><input type="number" id="edit-pause" min="0"></div>
+      </div>
+    </div>
+    <div class="field"><label>Notiz</label><input type="text" id="edit-notiz" placeholder="Notiz..."></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px" id="edit-preview"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveEdit()">Speichern</button>
+      <button class="btn" onclick="closeEditModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -371,20 +419,114 @@ function stempeln(){
     renderStempel();
     toast('Eingestempelt um '+stempel.einStr+' ✓');
   } else {
-    const ausStr = now.toTimeString().slice(0,5);
-    const pause = cfg.h >= 8 ? 30 : 0;
-    // Save entry
-    const idx = entries.findIndex(e=>e.datum===stempel.datum);
-    const entry = {datum:stempel.datum, typ:'arbeit', von:stempel.einStr, bis:ausStr, pause:pause, notiz:'', h:calcH(stempel.einStr,ausStr,pause)};
-    if(idx>=0) entries[idx]=entry; else entries.push(entry);
-    entries.sort((a,b)=>a.datum.localeCompare(b.datum));
+    stempel.ausStr = now.toTimeString().slice(0,5);
     stempel.status = 'aus';
-    stempel.ein = null;
     persist();
     renderStempel();
-    renderHome();
-    toast('Ausgestempelt um '+ausStr+' ✓');
+    openPauseModal();
   }
+}
+
+// ── PAUSE MODAL ──────────────────────────────────────────
+function openPauseModal(){
+  const ov = document.getElementById('modal-overlay');
+  document.getElementById('modal-von').value = stempel.einStr||'';
+  document.getElementById('modal-bis').value = stempel.ausStr||'';
+  document.getElementById('modal-pause').value = cfg.h>=8 ? 30 : 0;
+  document.getElementById('modal-notiz').value = '';
+  document.getElementById('modal-sub').textContent = 'Eingestempelt: '+stempel.einStr+' · Ausgestempelt: '+stempel.ausStr;
+  updateModalPreview();
+  ov.style.display='flex';
+  document.getElementById('modal-pause').oninput = updateModalPreview;
+  document.getElementById('modal-von').oninput = updateModalPreview;
+  document.getElementById('modal-bis').oninput = updateModalPreview;
+}
+
+function updateModalPreview(){
+  const von = document.getElementById('modal-von').value;
+  const bis = document.getElementById('modal-bis').value;
+  const pause = parseInt(document.getElementById('modal-pause').value)||0;
+  const h = calcH(von,bis,pause);
+  document.getElementById('modal-preview').textContent = h.toFixed(2)+' h';
+}
+
+function closePauseModal(){
+  document.getElementById('modal-overlay').style.display='none';
+  // Save with 0 pause as fallback
+  saveStempelEntry(stempel.einStr, stempel.ausStr, 0, '');
+}
+
+function confirmPause(){
+  const von = document.getElementById('modal-von').value || stempel.einStr;
+  const bis = document.getElementById('modal-bis').value || stempel.ausStr;
+  const pause = parseInt(document.getElementById('modal-pause').value)||0;
+  const notiz = document.getElementById('modal-notiz').value;
+  document.getElementById('modal-overlay').style.display='none';
+  saveStempelEntry(von, bis, pause, notiz);
+}
+
+function saveStempelEntry(von, bis, pause, notiz){
+  const idx = entries.findIndex(e=>e.datum===stempel.datum);
+  const entry = {datum:stempel.datum, typ:'arbeit', von, bis, pause, notiz, h:calcH(von,bis,pause)};
+  if(idx>=0) entries[idx]=entry; else entries.push(entry);
+  entries.sort((a,b)=>a.datum.localeCompare(b.datum));
+  stempel.ein = null;
+  stempel.einStr = null;
+  stempel.ausStr = null;
+  persist();
+  renderHome();
+  toast('Ausgestempelt · '+entry.h.toFixed(2)+' h gespeichert ✓');
+}
+
+// ── BEARBEITEN MODAL ─────────────────────────────────────
+function openEditModal(datum){
+  const e = entries.find(e=>e.datum===datum);
+  if(!e) return;
+  document.getElementById('edit-datum').value = datum;
+  document.getElementById('edit-typ').value = e.typ;
+  document.getElementById('edit-von').value = e.von||'';
+  document.getElementById('edit-bis').value = e.bis||'';
+  document.getElementById('edit-pause').value = e.pause||0;
+  document.getElementById('edit-notiz').value = e.notiz||'';
+  toggleEditTyp();
+  updateEditPreview();
+  document.getElementById('edit-overlay').style.display='flex';
+  document.getElementById('edit-von').oninput = updateEditPreview;
+  document.getElementById('edit-bis').oninput = updateEditPreview;
+  document.getElementById('edit-pause').oninput = updateEditPreview;
+}
+
+function toggleEditTyp(){
+  const t = document.getElementById('edit-typ').value;
+  document.getElementById('edit-zeiten').style.display = t==='arbeit'?'block':'none';
+}
+
+function updateEditPreview(){
+  const von = document.getElementById('edit-von').value;
+  const bis = document.getElementById('edit-bis').value;
+  const pause = parseInt(document.getElementById('edit-pause').value)||0;
+  const h = calcH(von,bis,pause);
+  document.getElementById('edit-preview').textContent = von&&bis ? 'Netto: '+h.toFixed(2)+' h' : '';
+}
+
+function saveEdit(){
+  const datum = document.getElementById('edit-datum').value;
+  const typ = document.getElementById('edit-typ').value;
+  const von = document.getElementById('edit-von').value;
+  const bis = document.getElementById('edit-bis').value;
+  const pause = parseInt(document.getElementById('edit-pause').value)||0;
+  const notiz = document.getElementById('edit-notiz').value;
+  const idx = entries.findIndex(e=>e.datum===datum);
+  if(idx>=0){
+    entries[idx] = {datum, typ, von, bis, pause, notiz, h:calcH(von,bis,pause)};
+    persist(); renderHome(); renderMonat();
+    toast('Eintrag aktualisiert ✓');
+  }
+  closeEditModal();
+}
+
+function closeEditModal(){
+  document.getElementById('edit-overlay').style.display='none';
 }
 
 function renderStempel(){
@@ -517,7 +659,7 @@ function renderMonat(){
       <td>${typBadge(e.typ)}</td>
       <td class="mono">${e.typ==='arbeit'?e.h.toFixed(2):'–'}</td>
       <td class="mono" style="color:${sld===null?'var(--text2)':sld>=0?'var(--green)':'var(--red)'}">${sld===null?'–':(sld>=0?'+':'')+sld.toFixed(2)}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="delEntry('${e.datum}')">×</button></td>
+      <td><div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="openEditModal('${e.datum}')" style="padding:5px 8px">✏️</button><button class="btn btn-sm btn-danger" onclick="delEntry('${e.datum}')">×</button></div></td>
     </tr>`;
   }).join(''); }
 
